@@ -4,13 +4,19 @@ import os
 import requests
 from datetime import datetime
 
-Choose_A_Station = 'R20'  # <<<< Input your station code here (UPPERCASE Letters) <<<<<<
-print("Running...")
+import os
+
+Choose_A_Station = os.environ.get('SOLARI_STATION', 'A44')  # station code (UPPERCASE)
+TRANSITER_HOST = os.environ.get('TRANSITER_HOST', 'transiter')
+TRANSITER_PORT = os.environ.get('TRANSITER_PORT', '8080')
+BASE_URL = f"http://{TRANSITER_HOST}:{TRANSITER_PORT}"
+
+print("Running...", "station=", Choose_A_Station, "transiter=", BASE_URL)
 
 
 def get_stop_times(station):
     # Fetch stop times data
-    stop_times_url = f"https://demo.transiter.dev/systems/us-ny-subway/stops/{station}"
+    stop_times_url = f"{BASE_URL}/systems/us-ny-subway/stops/{station}"
     stop_times_response = requests.get(stop_times_url)
     stop_times_data = stop_times_response.json()
 
@@ -45,7 +51,7 @@ def get_stop_times(station):
 
 def get_transfer_stations(station):
     # Fetch transfer data
-    transfers_url = "https://demo.transiter.dev/systems/us-ny-subway/transfers"
+    transfers_url = f"{BASE_URL}/systems/us-ny-subway/transfers"
     transfers_response = requests.get(transfers_url)
     transfers_data = transfers_response.json()
 
@@ -61,7 +67,7 @@ def contains_delay(value):
 
 def get_service_status():
     # Fetch route data
-    routes_url = 'https://demo.transiter.dev/systems/us-ny-subway/routes'
+    routes_url = f'{BASE_URL}/systems/us-ny-subway/routes'
     routes_response = requests.get(routes_url)
     routes_data = routes_response.json()
 
