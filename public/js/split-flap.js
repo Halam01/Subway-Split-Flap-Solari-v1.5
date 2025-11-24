@@ -4,6 +4,113 @@
 // Home Sweet Global Namespace
 var sf = {};
 
+// Minimal audio helper: play a short pulsed loop for a duration (default 3s)
+sf.audio = (function() {
+  const api = {
+    enabled: true,
+    src: '/audio/splitflap.mp3',
+    _ctx: null,
+    _buffer: null,
+    _gain: null,
+    _pulseSource: null,
+    _pulseTimer: null,
+    pulseDurationMs: 5000,
+    _fadeDurationMs: 400,
+
+    init: async function() {
+      if (this._ctx) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      try {
+        this._ctx = new AudioContext();
+        this._gain = this._ctx.createGain();
+        this._gain.gain.value = 0.12;
+        this._gain.connect(this._ctx.destination);
+
+        const resp = await fetch(this.src);
+        const ab = await resp.arrayBuffer();
+        try {
+          this._buffer = await this._ctx.decodeAudioData(ab);
+        } catch (e) {
+          this._buffer = await new Promise((resolve, reject) => {
+            this._ctx.decodeAudioData(ab, resolve, reject);
+          });
+        }
+
+        // Resume on first gesture if browser blocks autoplay
+        const resume = async () => {
+          try { if (this._ctx.state === 'suspended') await this._ctx.resume(); } catch (e) {}
+          document.removeEventListener('click', resume);
+          document.removeEventListener('keydown', resume);
+        };
+        document.addEventListener('click', resume, { once: true });
+        document.addEventListener('keydown', resume, { once: true });
+      } catch (e) {
+        console.warn('sf.audio.init failed', e);
+      }
+    },
+
+    // Play a looping pulse for `durationMs`, then fade out and stop
+    pulse: async function(durationMs) {
+      durationMs = typeof durationMs === 'number' ? durationMs : this.pulseDurationMs;
+      try {
+        await this.init();
+        if (!this._ctx || !this._buffer || !this._gain) return;
+        if (this._ctx.state === 'suspended') {
+          try { await this._ctx.resume(); } catch (e) {}
+        }
+
+        // clear existing pulse if present
+        if (this._pulseTimer) {
+          clearTimeout(this._pulseTimer);
+          this._pulseTimer = null;
+        }
+
+        if (!this._pulseSource) {
+          const src = this._ctx.createBufferSource();
+          src.buffer = this._buffer;
+          src.loop = true;
+          src.connect(this._gain);
+          try { src.start(0); } catch (e) {}
+          this._pulseSource = src;
+        }
+
+        // restore gain quickly
+        try { this._gain.gain.cancelScheduledValues(this._ctx.currentTime); } catch (e) {}
+        try { this._gain.gain.setValueAtTime(0.12, this._ctx.currentTime); } catch (e) {}
+
+        // schedule fade out to start AFTER the requested duration, then stop after fade
+        const fadeMs = this._fadeDurationMs;
+        const stopAfter = Math.max(0, durationMs); // ms to play at full volume
+        // start fade only after the full-duration has elapsed
+        const fadeStartSec = this._ctx.currentTime + (stopAfter / 1000);
+        try {
+          this._gain.gain.cancelScheduledValues(this._ctx.currentTime);
+          this._gain.gain.setValueAtTime(this._gain.gain.value || 0.12, this._ctx.currentTime);
+          this._gain.gain.linearRampToValueAtTime(0, fadeStartSec + (fadeMs / 1000));
+        } catch (e) {}
+
+        const self = this;
+        // stop after the duration plus fade time (plus a small buffer)
+        this._pulseTimer = setTimeout(() => {
+          try {
+            if (self._pulseSource) {
+              try { self._pulseSource.stop(0); } catch (e) {}
+              try { self._pulseSource.disconnect(); } catch (e) {}
+              self._pulseSource = null;
+            }
+          } catch (e) {}
+          if (self._pulseTimer) { clearTimeout(self._pulseTimer); self._pulseTimer = null; }
+        }, stopAfter + fadeMs + 50);
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+
+  return api;
+})();
+
 // Namespace for objects defined and used locally in templates
 sf.local = {};
 
@@ -59,6 +166,7 @@ sf.board = {
   // When it gets to the last row it reloads the page.
   reset: () => {
     console.log('Resetting Board');
+    // audio on station change only
     const stagger = sf.options.stagger ? sf.options.stagger : 1000;
     const rows = sf.options.container.find('.row');
     let i = 0;
@@ -94,7 +202,8 @@ sf.board = {
 // at options.pageInterval.
 sf.Items = Backbone.Collection.extend({
   update: function(options) {
-    console.log('Fetching Data', items.url);
+  console.log('Fetching Data', items.url);
+  // audio on station change only
     this.fetch({
       success: function(response) {
         const results = response.toJSON(),
@@ -140,6 +249,7 @@ sf.Items = Backbone.Collection.extend({
         if (page < numPages) {
           paginate();
         } else {
+          // sequence finished for this update cycle
           setTimeout(() => {
             items.update(options);
           }, pageInterval);
@@ -327,6 +437,8 @@ sf.Items = Backbone.Collection.extend({
           i++;
           if (i < rows.length) {
             loop(i);
+          } else {
+            // sequence finished
           }
         }, stagger);
       }
@@ -481,6 +593,8 @@ sf.Items = Backbone.Collection.extend({
           c = 'cpct';
           break;
       }
+      // (Audio: handled via pulse on update/reset)
+
       container
         .fadeOut(50, () => {
           container.removeClass().addClass(c);

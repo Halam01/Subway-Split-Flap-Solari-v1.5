@@ -15,6 +15,7 @@
     <div id="board" class="chartContainer splitflap">
         <div style="text-align:center; position:relative;">
             <input id="station-search" type="text" placeholder="Search stations (name or id)" style="margin-bottom:8px; padding:6px; width:60%; max-width:600px; background:#111; color:#fff; border:1px solid #444;" autocomplete="off" />
+            <label style="margin-left:8px; font-size:0.9em; color:#ddd;"><input id="sound-toggle" type="checkbox" checked style="margin-right:6px; vertical-align:middle;">Sound</label>
             <div id="station-results" style="position:absolute; left:50%; transform:translateX(-50%); top:42px; background:#0b0b0b; border:1px solid #333; max-height:220px; overflow:auto; width:60%; max-width:600px; z-index:1000; display:none;">
             </div>
             <h1 id="station-title" style="text-decoration: overline; margin:0">Loading...</h1>
@@ -197,6 +198,8 @@
                         $input.val(display);
                         $('#station-title').text(display);
                         $results.hide();
+                        // play 3s pulse for user-initiated station change
+                        try { if (window.sf && sf.audio && sf.audio.pulse) { sf.audio.pulse(3000); } } catch (e) {}
                         // reload arrivals immediately
                         try { if (window.sf && sf.items && sf.options) { sf.items.load(sf.options); } } catch (e) { console.warn('Could not reload arrivals', e); }
                     }).fail(function() {
@@ -204,6 +207,8 @@
                         $input.val(display);
                         $('#station-title').text(display);
                         $results.hide();
+                        // play 3s pulse for user-initiated station change
+                        try { if (window.sf && sf.audio && sf.audio.pulse) { sf.audio.pulse(3000); } } catch (e) {}
                         try { if (window.sf && sf.items && sf.options) { sf.items.load(sf.options); } } catch (e) { console.warn('Could not reload arrivals', e); }
                     });
                 }
@@ -271,6 +276,14 @@
                             setStationById(id);
                         }
                     }
+                });
+
+                // initialize audio helper
+                try { sf.audio.init(); } catch (e) {}
+
+                // sound toggle
+                $('#sound-toggle').on('change', function() {
+                    sf.audio.enabled = $(this).is(':checked');
                 });
 
             }).fail(function() {

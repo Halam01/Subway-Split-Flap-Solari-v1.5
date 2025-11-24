@@ -27,5 +27,8 @@ EXPOSE 8080
 # serve it statically.
 COPY public/stations.csv public/stations.csv
 RUN chmod 644 public/stations.csv || true
+# Copy any audio assets (e.g. split flap sample) so the container can serve them
+COPY public/audio public/audio
+RUN chmod -R 644 public/audio || true
 
 CMD ["npm", "start"]
