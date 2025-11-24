@@ -132,6 +132,8 @@
             sf.board.init(sf.options);
             sf.items.init(sf.options);
             sf.items.load(sf.options);
+            // Fit board to screen after initial load
+            try { setTimeout(fitBoard, 250); } catch (e) {}
 
             // Update the current time every second
             function updateTime() {
@@ -210,6 +212,8 @@
                         try { if (window.sf && sf.audio && sf.audio.pulse) { sf.audio.pulse(3000); } } catch (e) {}
                         // reload arrivals immediately
                         try { if (window.sf && sf.items && sf.options) { sf.items.load(sf.options); } } catch (e) { console.warn('Could not reload arrivals', e); }
+                        // refit to screen after the change
+                        try { setTimeout(fitBoard, 400); } catch (e) {}
                     }).fail(function() {
                         // still update UI locally
                         $input.val(display);
@@ -218,6 +222,8 @@
                         // play 3s pulse for user-initiated station change
                         try { if (window.sf && sf.audio && sf.audio.pulse) { sf.audio.pulse(3000); } } catch (e) {}
                         try { if (window.sf && sf.items && sf.options) { sf.items.load(sf.options); } } catch (e) { console.warn('Could not reload arrivals', e); }
+                        // refit to screen after the change
+                        try { setTimeout(fitBoard, 400); } catch (e) {}
                     });
                 }
 
@@ -433,6 +439,41 @@
                     // on Raspberry Pi Chromium the native keyboard may not appear; use OSK
                     try { OSK.show($(this)); } catch (err) {}
                 });
+
+                // --- Auto-fit board to the viewport ---
+                function fitBoard() {
+                    try {
+                        const el = document.getElementById('board');
+                        if (!el) return;
+                        // make sure transforms don't accumulate
+                        el.style.transform = '';
+                        el.style.transformOrigin = 'top left';
+                        // measure content size
+                        const contentW = el.scrollWidth || el.offsetWidth || el.getBoundingClientRect().width;
+                        const contentH = el.scrollHeight || el.offsetHeight || el.getBoundingClientRect().height;
+                        const vw = window.innerWidth || document.documentElement.clientWidth;
+                        const vh = window.innerHeight || document.documentElement.clientHeight;
+                        if (!contentW || !contentH) return;
+                        // leave a small margin (2%) so nothing touches edges
+                        const margin = 0.02;
+                        const availW = vw * (1 - margin * 2);
+                        const availH = vh * (1 - margin * 2);
+                        const scaleW = availW / contentW;
+                        // Fit horizontally only: choose width-based scale, clamp between 0.4 and 1
+                        const scale = Math.min(1, Math.max(scaleW, 0.4));
+                        el.style.transform = 'scale(' + scale + ')';
+                        // center horizontally by translating half of leftover space
+                        const left = Math.max(0, (vw - contentW * scale) / 2);
+                        el.style.marginLeft = left + 'px';
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                // re-fit on resize/orientation change
+                                $(window).on('resize orientationchange', function() { try { fitBoard(); } catch (e) {} });
+                                // also refit when the board has finished rendering its rows
+                                $(window).on('sf:boardRendered', function() { try { fitBoard(); } catch (e) {} });
 
             }).fail(function() {
                 // fallback: try to read arrivals for title

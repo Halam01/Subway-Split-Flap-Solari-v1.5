@@ -438,7 +438,8 @@ sf.Items = Backbone.Collection.extend({
           if (i < rows.length) {
             loop(i);
           } else {
-            // sequence finished
+            // sequence finished; notify page so it can refit the board
+            try { $(window).trigger('sf:boardRendered'); } catch (e) {}
           }
         }, stagger);
       }
