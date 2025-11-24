@@ -5,12 +5,10 @@
   "main": "app.js",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "node-fetch": "^2.6.7"
   },
-
   "scripts": {
-    "run-python": "python3 \"Solari Board V2.1.py\" &",
-    "start-node": "node app.js",
-    "start": "npm run run-python && npm run start-node"
+    "start": "node app.js"
   }
 }

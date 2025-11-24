@@ -13,7 +13,12 @@
 
     <!-- CONTAINER -->
     <div id="board" class="chartContainer splitflap">
-        <h1 id="station-title" style="text-align: center; text-decoration: overline;">Loading...</h1>
+        <div style="text-align:center; position:relative;">
+            <input id="station-search" type="text" placeholder="Search stations (name or id)" style="margin-bottom:8px; padding:6px; width:60%; max-width:600px; background:#111; color:#fff; border:1px solid #444;" autocomplete="off" />
+            <div id="station-results" style="position:absolute; left:50%; transform:translateX(-50%); top:42px; background:#0b0b0b; border:1px solid #333; max-height:220px; overflow:auto; width:60%; max-width:600px; z-index:1000; display:none;">
+            </div>
+            <h1 id="station-title" style="text-decoration: overline; margin:0">Loading...</h1>
+        </div>
 
         <!-- Header: 30px/char, 15px/separator, 120px/logo -->
         <div class="header" style="width:120px;margin-left:0px;">Route</div>
@@ -139,14 +144,145 @@
             setInterval(updateTime, 1000);
             updateTime(); // Initial call to display time immediately
 
-            // Fetch stop name and update the title
-            $.get('/api/arrivals', function(response) {
-                if (response.data && response.data.length > 0) {
-                    const currentStop = response.data[0].stop;
-                    $('#station-title').text(currentStop);
-                } else {
-                    $('#station-title').text('No Stop Information Available');
+            // Load stations.csv and populate the dropdown, then set/get current station
+            function parseCSV(text) {
+                const lines = text.split(/\r?\n/).filter(Boolean);
+                if (lines.length === 0) return [];
+                const header = lines.shift();
+                const rows = [];
+                lines.forEach(line => {
+                    // Try to extract stop_id and name robustly, handling quoted names
+                    let stop_id = '';
+                    let name = '';
+                    // If name is quoted and may contain commas
+                    const quotedMatch = line.match(/^([^,]+),"([^"]+)"(,|$)/);
+                    if (quotedMatch) {
+                        stop_id = quotedMatch[1];
+                        name = quotedMatch[2];
+                    } else {
+                        // fallback: split by comma and take second column as name
+                        const parts = line.split(',');
+                        stop_id = parts[0] || '';
+                        name = parts[1] || '';
+                    }
+                    rows.push({ stop_id: stop_id.trim(), name: name.trim() });
+                });
+                return rows;
+            }
+
+            $.get('/stations.csv', function(csvText) {
+                const stations = parseCSV(csvText);
+                const stationsArr = stations.filter(s => s && s.stop_id).map(s => ({ id: s.stop_id, name: s.name }));
+                const $input = $('#station-search');
+                const $results = $('#station-results');
+
+                function renderResults(list) {
+                    if (!list || list.length === 0) {
+                        $results.hide();
+                        return;
+                    }
+                    $results.empty();
+                    list.forEach(item => {
+                        const $row = $('<div>').addClass('station-result').attr('data-id', item.id).text(item.name + ' (' + item.id + ')').css({ padding: '6px 8px', cursor: 'pointer', borderBottom: '1px solid #222' });
+                        $results.append($row);
+                    });
+                    $results.show();
                 }
+
+                function setStationById(id) {
+                    const match = stationsArr.find(s => s.id === id);
+                    const display = match ? (match.name + ' (' + match.id + ')') : id;
+                    // call server to set station and wait for server to refresh data
+                    $.get('/api/station', { station: id }, function() {
+                        $input.val(display);
+                        $('#station-title').text(display);
+                        $results.hide();
+                        // reload arrivals immediately
+                        try { if (window.sf && sf.items && sf.options) { sf.items.load(sf.options); } } catch (e) { console.warn('Could not reload arrivals', e); }
+                    }).fail(function() {
+                        // still update UI locally
+                        $input.val(display);
+                        $('#station-title').text(display);
+                        $results.hide();
+                        try { if (window.sf && sf.items && sf.options) { sf.items.load(sf.options); } } catch (e) { console.warn('Could not reload arrivals', e); }
+                    });
+                }
+
+                // Initialize input with server station if present
+                $.get('/api/station', function(resp) {
+                    const current = resp && resp.station ? resp.station : null;
+                    if (current) {
+                        const m = stationsArr.find(s => s.id === current);
+                        const txt = m ? (m.name + ' (' + m.id + ')') : current;
+                        $input.val(txt);
+                        $('#station-title').text(txt);
+                    } else if (stationsArr.length > 0) {
+                        // set server to first station if none set
+                        setStationById(stationsArr[0].id);
+                    }
+                }).fail(function(){
+                    if (stationsArr.length > 0) {
+                        const txt = stationsArr[0].name + ' (' + stationsArr[0].id + ')';
+                        $input.val(txt);
+                        $('#station-title').text(txt);
+                    }
+                });
+
+                // input handler
+                $input.on('input', function() {
+                    const q = $(this).val().trim().toLowerCase();
+                    if (!q) {
+                        renderResults(stationsArr.slice(0, 50));
+                        return;
+                    }
+                    const matches = stationsArr.filter(s => (s.name && s.name.toLowerCase().indexOf(q) !== -1) || (s.id && s.id.toLowerCase().indexOf(q) !== -1));
+                    renderResults(matches.slice(0, 100));
+                });
+
+                // click handler for results
+                $results.on('click', '.station-result', function(e) {
+                    const id = $(this).attr('data-id');
+                    setStationById(id);
+                });
+
+                // show suggestions on focus
+                $input.on('focus', function() {
+                    if ($input.val().trim() === '') {
+                        renderResults(stationsArr.slice(0, 50));
+                    } else {
+                        $input.trigger('input');
+                    }
+                });
+
+                // hide suggestions when clicking outside
+                $(document).on('click', function(e) {
+                    if (!$(e.target).closest('#station-search, #station-results').length) {
+                        $results.hide();
+                    }
+                });
+
+                // keyboard support: Enter to pick first result
+                $input.on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const first = $results.find('.station-result').first();
+                        if (first.length) {
+                            const id = first.attr('data-id');
+                            setStationById(id);
+                        }
+                    }
+                });
+
+            }).fail(function() {
+                // fallback: try to read arrivals for title
+                $.get('/api/arrivals', function(response) {
+                    if (response.data && response.data.length > 0) {
+                        const currentStop = response.data[0].stop;
+                        $('#station-title').text(currentStop);
+                    } else {
+                        $('#station-title').text('No Stop Information Available');
+                    }
+                });
             });
         });
     </script>

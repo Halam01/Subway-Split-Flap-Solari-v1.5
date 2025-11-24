@@ -20,5 +20,12 @@ ENV NODE_ENV=production
 ENV PORT=8080
 
 EXPOSE 8080
+ 
+# Ensure stations.csv is present in the built image under the public directory
+# (some builds may have excluded it previously). This copies the file from the
+# project context into the image's `WORKDIR/public` so the node server can
+# serve it statically.
+COPY public/stations.csv public/stations.csv
+RUN chmod 644 public/stations.csv || true
 
 CMD ["npm", "start"]
