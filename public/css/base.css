@@ -5,6 +5,15 @@ body {
   overflow: auto; /* allow scrolling */
 }
 
+/* Hide native scrollbars but keep scrolling behavior */
+html, body {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 a {
   color: #fff;
   text-decoration: none;
@@ -366,3 +375,27 @@ a {
 .splitflap .character span.ccom {
   background-position: -975px 0px;
 } /* , */
+
+/* On-screen keyboard styles */
+#osk {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  z-index: 2000;
+  background: rgba(10,10,10,0.98);
+  border: 1px solid #333;
+  padding: 8px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+  max-width: 980px;
+  width: calc(100% - 40px);
+}
+.osk .osk-keys { display:block; }
+.osk-row { display:flex; justify-content:center; margin:4px 0; }
+.osk-key { background:#222; color:#fff; border:1px solid #444; padding:10px 12px; margin:2px; font-size:18px; border-radius:4px; min-width:36px; }
+.osk-key:active { background:#333; }
+.osk-row-actions { display:flex; justify-content:center; }
+.osk-space { min-width:240px; }
+.osk-actions { text-align:right; margin-top:6px; }
+.osk-close { background:#333; color:#fff; border:1px solid #444; padding:6px 10px; border-radius:4px; }
