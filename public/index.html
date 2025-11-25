@@ -11,23 +11,20 @@
     <!-- CURRENT TIME -->
     <div id="current-time" style="position: absolute; top: 25px; left: 25px; font-size: 30px; font-weight: bold;"></div>
 
+    <!-- Fullscreen checkbox moved next to Sound control (see below) -->
+
     <!-- CONTAINER -->
     <div id="board" class="chartContainer splitflap">
         <div style="text-align:center; position:relative;">
             <input id="station-search" type="text" placeholder="Search stations (name or id)" style="margin-bottom:8px; padding:6px; width:60%; max-width:600px; background:#111; color:#fff; border:1px solid #444;" autocomplete="off" />
             <label style="margin-left:8px; font-size:0.9em; color:#ddd;"><input id="sound-toggle" type="checkbox" checked style="margin-right:6px; vertical-align:middle;">Sound</label>
+            <label style="margin-left:8px; font-size:0.9em; color:#ddd;"><input id="fullscreen-toggle-checkbox" type="checkbox" style="margin-right:6px; vertical-align:middle;">Fullscreen</label>
             <div id="station-results" style="position:absolute; left:50%; transform:translateX(-50%); top:42px; background:#0b0b0b; border:1px solid #333; max-height:220px; overflow:auto; width:60%; max-width:600px; z-index:1000; display:none;">
             </div>
             <h1 id="station-title" style="text-decoration: overline; margin:0">Loading...</h1>
         </div>
 
-        <!-- On-screen keyboard container (hidden by default) -->
-        <div id="osk" class="osk" style="display:none;">
-            <div class="osk-keys"></div>
-            <div class="osk-actions">
-                <button class="osk-close">Close</button>
-            </div>
-        </div>
+        <!-- (Removed custom on-screen keyboard; rely on native keyboard) -->
 
         <!-- Header: 30px/char, 15px/separator, 120px/logo -->
         <div class="header" style="width:120px;margin-left:0px;">Route</div>
@@ -300,145 +297,7 @@
                     sf.audio.enabled = $(this).is(':checked');
                 });
 
-                // --- Simple on-screen keyboard (OSK) for touch / Pi Chromium ---
-                const OSK = (function() {
-                    const container = $('#osk');
-                    const keysWrap = container.find('.osk-keys');
-                    let target = null;
-                    let _lastCaret = 0; // fallback caret position when selectionStart isn't available
-
-                    // Key layout: rows of keys
-                    const layout = [
-                        "1234567890",
-                        "qwertyuiop",
-                        "asdfghjkl",
-                        "zxcvbnm",
-                        " -,.'@:/" // extra chars
-                    ];
-
-                    function build() {
-                        keysWrap.empty();
-                        layout.forEach(row => {
-                            const $row = $('<div>').addClass('osk-row');
-                            for (let ch of row) {
-                                const $k = $('<button>').addClass('osk-key').text(ch);
-                                $row.append($k);
-                            }
-                            keysWrap.append($row);
-                        });
-                        // space, backspace, enter
-                        const $row = $('<div>').addClass('osk-row osk-row-actions');
-                        $row.append($('<button>').addClass('osk-key osk-space').text('Space'));
-                        $row.append($('<button>').addClass('osk-key osk-back').text('⌫'));
-                        $row.append($('<button>').addClass('osk-key osk-enter').text('Enter'));
-                        keysWrap.append($row);
-                    }
-
-                    function show($target) {
-                        target = $target;
-                        container.show();
-                        // move focus to input so caret appears and update caret tracker
-                        try {
-                            const el = target[0];
-                            el.focus();
-                            // try to set caret at end if not already set
-                            const len = (target.val() || '').length;
-                            try { el.setSelectionRange(len, len); } catch (e) {}
-                            _lastCaret = el.selectionStart || len;
-                            // attach listeners to keep caret updated
-                            $(el).off('.oskCaret').on('input.oskCaret keyup.oskCaret click.oskCaret focus.oskCaret', function() {
-                                try { _lastCaret = (typeof el.selectionStart === 'number') ? el.selectionStart : (target.val() || '').length; } catch (e) { _lastCaret = (target.val() || '').length; }
-                            });
-                        } catch (e) {}
-                    }
-
-                    function hide() {
-                        container.hide();
-                        target = null;
-                    }
-
-                    function insertAtCaret(ch) {
-                        if (!target) return;
-                        const el = target[0];
-                        try { el.focus(); } catch (e) {}
-                        const val = target.val() || '';
-                        const start = (typeof el.selectionStart === 'number') ? el.selectionStart : _lastCaret || val.length;
-                        const end = (typeof el.selectionEnd === 'number') ? el.selectionEnd : _lastCaret || val.length;
-                        const newVal = val.slice(0, start) + ch + val.slice(end);
-                        target.val(newVal);
-                        const pos = start + ch.length;
-                        try { el.setSelectionRange(pos, pos); } catch (e) {}
-                        _lastCaret = pos;
-                        target.trigger('input');
-                    }
-
-                    function backspace() {
-                        if (!target) return;
-                        const el = target[0];
-                        try { el.focus(); } catch (e) {}
-                        const val = target.val() || '';
-                        const start = (typeof el.selectionStart === 'number') ? el.selectionStart : _lastCaret || val.length;
-                        const end = (typeof el.selectionEnd === 'number') ? el.selectionEnd : _lastCaret || val.length;
-                        if (start === end && start > 0) {
-                            const newVal = val.slice(0, start - 1) + val.slice(end);
-                            target.val(newVal);
-                            const pos = start - 1;
-                            try { el.setSelectionRange(pos, pos); } catch (e) {}
-                            _lastCaret = pos;
-                        } else if (start !== end) {
-                            const newVal = val.slice(0, start) + val.slice(end);
-                            target.val(newVal);
-                            try { el.setSelectionRange(start, start); } catch (e) {}
-                            _lastCaret = start;
-                        }
-                        target.trigger('input');
-                    }
-
-                    // build once
-                    build();
-
-                    // delegate clicks
-                    container.on('click', '.osk-key', function(e) {
-                        e.preventDefault();
-                        const $btn = $(this);
-                        if ($btn.hasClass('osk-space')) {
-                            insertAtCaret(' ');
-                        } else if ($btn.hasClass('osk-back')) {
-                            backspace();
-                        } else if ($btn.hasClass('osk-enter')) {
-                            // simulate pressing Enter: pick first result if available
-                            const first = $('#station-results').find('.station-result').first();
-                            if (first.length) {
-                                const id = first.attr('data-id');
-                                first.trigger('click');
-                            }
-                            hide();
-                        } else {
-                            insertAtCaret($btn.text());
-                        }
-                        return false;
-                    });
-
-                    container.on('click', '.osk-close', function(e) {
-                        e.preventDefault();
-                        hide();
-                    });
-
-                    // clicking outside hides keyboard
-                    $(document).on('click touchstart', function(e) {
-                        if (!$(e.target).closest('#osk, #station-search, #station-results').length) {
-                            hide();
-                        }
-                    });
-
-                    return { show, hide };
-                })();
-
-                // show OSK on focus/click for station input to trigger virtual keyboard on Pi
-                $('#station-search').on('focus touchstart', function(e) {
-                    // on Raspberry Pi Chromium the native keyboard may not appear; use OSK
-                    try { OSK.show($(this)); } catch (err) {}
-                });
+                // (Custom on-screen keyboard removed — relying on native keyboard and fullscreen toggle)
 
                 // --- Auto-fit board to the viewport ---
                 function fitBoard() {
@@ -471,9 +330,37 @@
                 }
 
                 // re-fit on resize/orientation change
-                                $(window).on('resize orientationchange', function() { try { fitBoard(); } catch (e) {} });
-                                // also refit when the board has finished rendering its rows
-                                $(window).on('sf:boardRendered', function() { try { fitBoard(); } catch (e) {} });
+                $(window).on('resize orientationchange', function() { try { fitBoard(); } catch (e) {} });
+                // also refit when the board has finished rendering its rows
+                $(window).on('sf:boardRendered', function() { try { fitBoard(); } catch (e) {} });
+
+                // --- Fullscreen toggle (checkbox) ---
+                const fsCheckbox = $('#fullscreen-toggle-checkbox');
+                function updateFsCheckbox() {
+                    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+                    try { fsCheckbox.prop('checked', isFs); } catch (e) {}
+                }
+
+                fsCheckbox.on('change', function() {
+                    const checked = fsCheckbox.is(':checked');
+                    if (checked) {
+                        const el = document.documentElement;
+                        if (el.requestFullscreen) el.requestFullscreen();
+                        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                        else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+                    } else {
+                        if (document.exitFullscreen) document.exitFullscreen();
+                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+                    }
+                });
+
+                // Update checkbox when fullscreen state changes externally
+                document.addEventListener('fullscreenchange', updateFsCheckbox);
+                document.addEventListener('webkitfullscreenchange', updateFsCheckbox);
+                document.addEventListener('mozfullscreenchange', updateFsCheckbox);
+                updateFsCheckbox(); // initial state
+
 
             }).fail(function() {
                 // fallback: try to read arrivals for title
