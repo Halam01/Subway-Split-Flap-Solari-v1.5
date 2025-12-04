@@ -4,6 +4,49 @@ const express = require('express');
 const fetch = require('node-fetch');
 const app = express();
 
+// Serve static assets
+app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
+// Helper: Get nth weekday of month
+function getNthWeekday(year, month, nth, weekday) {
+  const d = new Date(year, month, 1);
+  let day = 1 + (weekday - d.getDay() + 7) % 7;
+  if (day > 7) day -= 7;
+  return day + (nth - 1) * 7;
+}
+
+// Helper: Last weekday of month
+function getLastWeekday(year, month, weekday) {
+  const lastDay = new Date(year, month + 1, 0);
+  const day = lastDay.getDate();
+  const wd = lastDay.getDay();
+  return day - ((wd - weekday + 7) % 7);
+}
+
+// Determine current holiday folder and message
+function getHolidayInfo(date = new Date()) {
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0–11
+  const day = date.getDate();
+
+  const holidays = [
+    { folder: 'newyears',      date: { m: 0,  d: 1 }, msg: "Happy New Year!" },
+    { folder: 'independence',   date: { m: 6,  d: 4 }, msg: "Happy Independence Day!" },
+    { folder: 'halloween',   date: { m: 9, d: 31 }, msg: "Happy Halloween!" },
+    { folder: 'birthday',   date: { m: 1, d: 21 }, msg: "Happy Birthday Christine!" },
+    { folder: 'christmas',      date: { m: 11, d: 25 }, msg: "Merry Christmas!" },
+    { folder: 'christmaseve',      date: { m: 11, d: 24 }, msg: "Merry Christmas Eve!" },
+  ];
+
+  for (const h of holidays) {
+    const hd = h.date;
+    if (month === hd.m && day === (typeof hd.d === 'function' ? hd.d() : hd.d)) {
+      return { folder: h.folder, message: h.msg };
+    }
+  }
+
+  return { folder: 'default', message: 'Have a great day!' };
+}
+
 const jsonFilePath = 'output.json';
 
 // Configuration and state
@@ -210,6 +253,31 @@ app.get('/stations.csv', (req, res) => {
     } else {
         res.status(404).send('stations.csv not found');
     }
+});
+
+// === Holiday banner data endpoint ===
+app.get('/holiday-info', (req, res) => {
+    const { folder, message } = getHolidayInfo();
+    const gifDir = path.join(__dirname, 'public/assets', folder);
+
+    fs.readdir(gifDir, (err, files) => {
+        if (err || !files) {
+            return res.json({ message: '', gifs: [], isHoliday: false });
+        }
+
+        const gifs = files
+            .filter(f => /\.(gif|png|jpe?g)$/i.test(f))
+            .map(f => `/assets/${folder}/${f}`);
+
+        const isHoliday = folder !== 'default' || gifs.length > 0;
+        const shuffled = isHoliday ? [...gifs].sort(() => Math.random() - 0.5) : [];
+
+        res.json({
+            message: isHoliday ? message : '',
+            gifs: shuffled,
+            isHoliday
+        });
+    });
 });
 
 const port = process.env.PORT || 8080;

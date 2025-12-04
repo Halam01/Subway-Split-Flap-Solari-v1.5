@@ -8,12 +8,18 @@
     <link rel="stylesheet" href="plugins/arrivals/custom.css">
 </head>
 <body>
-    <div class="top-bar">
+    <div class="top-bar" style="position:relative; overflow:hidden;">
         <div class="info">
             <!-- CURRENT TIME -->
             <div id="current-time"></div>
             <!-- WEATHER DISPLAY -->
             <div id="weather-display"></div>
+        </div>
+
+        <!-- HOLIDAY GIF BANNER -->
+        <div id="holiday-center">
+            <div id="holiday-message"></div>
+            <img id="holiday-gif" src="" alt="Holiday">
         </div>
 
         <!-- SOUND AND FULLSCREEN TOGGLES -->
@@ -134,7 +140,66 @@
             stagger: 300 // delay between loading rows (ms)
         };
 
+        // === HOLIDAY GIF BANNER LOGIC ===
+        function loadHolidayBanner() {
+            fetch('/holiday-info')
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => {
+                    const container = document.getElementById('holiday-center');
+                    const msgEl = document.getElementById('holiday-message');
+                    const gifEl = document.getElementById('holiday-gif');
+                    const topBar = document.querySelector('.top-bar');
+
+                    const updateHeight = () => {
+                        if (!container.classList.contains('active')) return;
+                        // Measure the actual content height
+                        const rect = container.getBoundingClientRect();
+                        const needed = rect.height + 40; // padding
+                        topBar.style.minHeight = Math.max(80, needed) + 'px';
+                    };
+
+                    if (data.isHoliday && data.gifs && data.gifs.length > 0) {
+                        msgEl.textContent = data.message;
+
+                        let i = 0;
+                        const rotate = () => {
+                            const src = data.gifs[i] + '?t=' + Date.now();
+                            if (gifEl.src !== src) {
+                                gifEl.src = src;
+                            }
+                            i = (i + 1) % data.gifs.length;
+                        };
+
+                        gifEl.onload = updateHeight;
+                        rotate();
+                        setInterval(rotate, 3 * 60 * 1000);
+
+                        container.classList.add('active');
+                        // Initial height after DOM update
+                        setTimeout(updateHeight, 100);
+                    } else {
+                        container.classList.remove('active');
+                        topBar.style.minHeight = '80px';
+                    }
+                })
+                .catch(err => {
+                    console.error('Holiday banner error:', err);
+                    document.getElementById('holiday-center').classList.remove('active');
+                    document.querySelector('.top-bar').style.minHeight = '80px';
+                });
+        }
+        // Also run on window resize
+        window.addEventListener('resize', () => {
+            if (document.querySelector('#holiday-center.active')) {
+                const container = document.getElementById('holiday-center');
+                const topBar = document.querySelector('.top-bar');
+                const needed = container.getBoundingClientRect().height + 40;
+                topBar.style.minHeight = Math.max(80, needed) + 'px';
+            }
+        });
+
         $(document).ready(function() {
+            loadHolidayBanner();
             sf.board.init(sf.options);
             sf.items.init(sf.options);
             sf.items.load(sf.options);

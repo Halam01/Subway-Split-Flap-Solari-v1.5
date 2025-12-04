@@ -30,5 +30,8 @@ RUN chmod 644 public/stations.csv || true
 # Copy any audio assets (e.g. split flap sample) so the container can serve them
 COPY public/audio public/audio
 RUN chmod -R 644 public/audio || true
+# Copy any image assets (e.g. logo) so the container can serve them
+COPY public/assets public/assets
+RUN chmod -R 644 public/assets || true
 
 CMD ["npm", "start"]

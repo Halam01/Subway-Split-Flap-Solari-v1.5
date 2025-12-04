@@ -19,17 +19,6 @@ a {
   text-decoration: none;
 }
 
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    background: rgba(0,0,0,0.8);
-    flex-wrap: wrap;
-    gap: 12px;
-    font-size: 0.95rem;
-    z-index: 10;
-}
 #current-time {
     font-size: 2.2rem;
     font-weight: bold;
@@ -52,6 +41,66 @@ a {
     cursor: pointer;
     color: #ddd;
     font-size: 0.95rem;
+}
+.top-bar {
+    position: relative;
+    min-height: 80px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: min-height 0.6s ease;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#holiday-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;                    /* space between text and GIF */
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 1s ease;
+    white-space: nowrap;
+    max-width: 90%;
+}
+#holiday-center.active {
+    opacity: 1;
+}
+
+#holiday-message {
+    font-size: clamp(1.6rem, 3.8vw, 2.8rem);
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 12px #000, 3px 3px 0 #000;
+    margin: 0;
+    line-height: 1.2;
+}
+
+#holiday-gif {
+    height: clamp(60px, 10vw, 110px);   /* scales nicely */
+    width: auto;
+    border: 5px solid #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+    #holiday-center { gap: 14px; }
+    #holiday-message { font-size: clamp(1.4rem, 3.2vw, 2.2rem); }
+}
+@media (max-width: 700px) {
+    #holiday-center { gap: 10px; flex-direction: column; text-align: center; }
+    #holiday-message { font-size: 1.5rem; }
+    #holiday-gif { height: 70px; }
 }
 .splitflap {
   width: 1600px;
