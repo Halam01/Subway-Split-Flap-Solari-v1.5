@@ -9,11 +9,12 @@
 </head>
 <body>
     <div class="top-bar">
-        <!-- CURRENT TIME -->
-        <div id="current-time"></div>
-
-        <!-- WEATHER DISPLAY -->
-        <div id="weather-display"></div>
+        <div class="info">
+            <!-- CURRENT TIME -->
+            <div id="current-time"></div>
+            <!-- WEATHER DISPLAY -->
+            <div id="weather-display"></div>
+        </div>
 
         <!-- SOUND AND FULLSCREEN TOGGLES -->
         <div class="controls">
@@ -24,14 +25,14 @@
 
     <!-- CONTAINER -->
     <div id="board" class="chartContainer splitflap">
+
+        <!-- STATION SEARCH BAR -->
         <div style="text-align:center; position:relative;">
-            <input id="station-search" type="text" placeholder="Search stations (name or id)" style="margin-bottom:8px; padding:6px; width:60%; max-width:600px; background:#111; color:#fff; border:1px solid #444;" autocomplete="off" />
+            <input id="station-search" type="text" placeholder="Search stations (name or id)" style="margin-bottom:8px; padding:6px; width:60%; max-width:600px; background:#111; color:#fff; border:1px solid #444; font-size: 2.2rem;" autocomplete="off" />
             <div id="station-results" style="position:absolute; left:50%; transform:translateX(-50%); top:42px; background:#0b0b0b; border:1px solid #333; max-height:220px; overflow:auto; width:60%; max-width:600px; z-index:1000; display:none;">
             </div>
-            <h1 id="station-title" style="text-decoration: overline; margin:0">Loading...</h1>
+            <!-- <h1 id="station-title" style="text-decoration: overline; margin:0">Loading...</h1> -->
         </div>
-
-        <!-- (Removed custom on-screen keyboard; rely on native keyboard) -->
 
         <!-- Header: 30px/char, 15px/separator, 120px/logo -->
         <div class="header" style="width:120px;margin-left:0px;">Route</div>
