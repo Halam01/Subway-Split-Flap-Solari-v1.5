@@ -8,20 +8,24 @@
     <link rel="stylesheet" href="plugins/arrivals/custom.css">
 </head>
 <body>
-    <!-- CURRENT TIME -->
-    <div id="current-time" style="position: absolute; top: 25px; left: 25px; font-size: 30px; font-weight: bold;"></div>
+    <div class="top-bar">
+        <!-- CURRENT TIME -->
+        <div id="current-time"></div>
 
-    <!-- WEATHER DISPLAY -->
-    <div id="weather-display" style="position: absolute; top: 25px; left: 250px; font-size: 14px; color: #ddd; font-weight: normal;"></div>
+        <!-- WEATHER DISPLAY -->
+        <div id="weather-display"></div>
 
-    <!-- Fullscreen checkbox moved next to Sound control (see below) -->
+        <!-- SOUND AND FULLSCREEN TOGGLES -->
+        <div class="controls">
+            <label><input type="checkbox" id="sound-toggle" checked> Sound</label>
+            <label><input type="checkbox" id="fullscreen-toggle-checkbox"> Fullscreen</label>
+        </div>
+    </div>
 
     <!-- CONTAINER -->
     <div id="board" class="chartContainer splitflap">
         <div style="text-align:center; position:relative;">
             <input id="station-search" type="text" placeholder="Search stations (name or id)" style="margin-bottom:8px; padding:6px; width:60%; max-width:600px; background:#111; color:#fff; border:1px solid #444;" autocomplete="off" />
-            <label style="margin-left:8px; font-size:0.9em; color:#ddd;"><input id="sound-toggle" type="checkbox" checked style="margin-right:6px; vertical-align:middle;">Sound</label>
-            <label style="margin-left:8px; font-size:0.9em; color:#ddd;"><input id="fullscreen-toggle-checkbox" type="checkbox" style="margin-right:6px; vertical-align:middle;">Fullscreen</label>
             <div id="station-results" style="position:absolute; left:50%; transform:translateX(-50%); top:42px; background:#0b0b0b; border:1px solid #333; max-height:220px; overflow:auto; width:60%; max-width:600px; z-index:1000; display:none;">
             </div>
             <h1 id="station-title" style="text-decoration: overline; margin:0">Loading...</h1>
