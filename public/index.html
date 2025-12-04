@@ -175,6 +175,9 @@
                         setInterval(rotate, 3 * 60 * 1000);
 
                         container.classList.add('active');
+                        if (data.isHoliday) {
+                            setTimeout(updateWeatherScrollMargin, 200);
+                        }
                         // Initial height after DOM update
                         setTimeout(updateHeight, 100);
                     } else {
@@ -188,6 +191,29 @@
                     document.querySelector('.top-bar').style.minHeight = '80px';
                 });
         }
+
+        function updateWeatherScrollMargin() {
+            const holiday = document.getElementById('holiday-center');
+            const info = document.querySelector('.info');
+            const weather = document.getElementById('weather-display');
+
+            if (holiday && holiday.classList.contains('active')) {
+                // When holiday banner is visible → reduce scroll area
+                info.style.paddingRight = '100px';
+                info.style.marginRight = '-70px';
+                weather.style.width = 'calc(100% - 80px)';
+            } else {
+                // Normal day → full width
+                info.style.paddingRight = '15px';
+                info.style.marginRight = '0';
+                weather.style.width = '100%';
+            }
+        }
+
+        // Call it when holiday loads and on resize
+        window.addEventListener('load', updateWeatherScrollMargin);
+        window.addEventListener('resize', updateWeatherScrollMargin);
+
         // Also run on window resize
         window.addEventListener('resize', () => {
             if (document.querySelector('#holiday-center.active')) {
@@ -230,7 +256,6 @@
             // Brooklyn coordinates: 40.6501°N, 73.9496°W
             function updateWeather() {
                 if (typeof weather !== 'undefined') {
-                    // Use fetch directly to get raw response
                     const params = new URLSearchParams({
                         latitude: 40.6501,
                         longitude: -73.9496,
@@ -240,44 +265,39 @@
                         precipitation_unit: 'inch',
                         timezone: 'America/New_York'
                     });
-                    
+
                     fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`)
                         .then(response => response.json())
                         .then(rawData => {
-                            // Log raw response to console
-                            console.log('Weather API Response:', rawData);
-                            
-                            // Process the response
-                            if (rawData.error) {
-                                throw new Error(`Weather API error: ${rawData.reason}`);
-                            }
-                            
+                            if (rawData.error) throw new Error(rawData.reason);
+
                             const current = rawData.current || {};
                             const daily = rawData.daily || {};
                             const temp = Math.round(current.temperature_2m);
                             const weatherCode = current.weather_code;
                             const condition = weather.interpretWeatherCode(weatherCode);
-                            const rainAmount = current.rain ? Math.round(current.rain * 100) / 100 : 0;
-                            const snowAmount = current.snowfall ? Math.round(current.snowfall * 100) / 100 : 0;
-                            
-                            // Get today's high and low (first element in daily arrays)
-                            const highTemp = daily.temperature_2m_max && daily.temperature_2m_max.length > 0 
-                                ? Math.round(daily.temperature_2m_max[0]) 
-                                : null;
-                            const lowTemp = daily.temperature_2m_min && daily.temperature_2m_min.length > 0 
-                                ? Math.round(daily.temperature_2m_min[0]) 
-                                : null;
-                            
+                            const highTemp = daily.temperature_2m_max?.[0] ? Math.round(daily.temperature_2m_max[0]) : null;
+                            const lowTemp = daily.temperature_2m_min?.[0] ? Math.round(daily.temperature_2m_min[0]) : null;
+
                             let weatherHTML = `${temp}°F | ${condition}`;
-                            
                             if (highTemp !== null && lowTemp !== null) {
                                 weatherHTML += ` | H: ${highTemp}°F L: ${lowTemp}°F`;
                             }
-                            
-                            if (rainAmount > 0) weatherHTML += ` | Rain: ${rainAmount}"`;
-                            if (snowAmount > 0) weatherHTML += ` | Snow: ${snowAmount}"`;
-                            
-                            $('#weather-display').html(weatherHTML);
+
+                            // Insert with ticker wrapper and auto-detect overflow
+                            $('#weather-display').html(`<div class="ticker">${weatherHTML}</div>`).removeClass('long');
+
+                            setTimeout(() => {
+                                const infoBox = document.querySelector('.info');
+                                const ticker = document.querySelector('#weather-display .ticker');
+                                
+                                if (ticker && infoBox) {
+                                    // Only scroll if weather text is wider than the .info container
+                                    if (ticker.scrollWidth > infoBox.clientWidth + 10) {
+                                        $('#weather-display').addClass('long');
+                                    }
+                                }
+                            }, 100);
                         })
                         .catch(err => {
                             console.error('Weather API error:', err);
