@@ -6,7 +6,7 @@ from datetime import datetime
 
 import os
 
-Choose_A_Station = os.environ.get('SOLARI_STATION', 'A44')  # station code (UPPERCASE)
+Choose_A_Station = os.environ.get('SOLARI_STATION', '232')  # station code (UPPERCASE)
 TRANSITER_HOST = os.environ.get('TRANSITER_HOST', 'transiter')
 TRANSITER_PORT = os.environ.get('TRANSITER_PORT', '8080')
 BASE_URL = f"http://{TRANSITER_HOST}:{TRANSITER_PORT}"

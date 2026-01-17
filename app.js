@@ -50,7 +50,7 @@ function getHolidayInfo(date = new Date()) {
 const jsonFilePath = 'output.json';
 
 // Configuration and state
-let Choose_A_Station = process.env.SOLARI_STATION || 'A44';
+let Choose_A_Station = process.env.SOLARI_STATION || '232';
 const TRANSITER_HOST = process.env.TRANSITER_HOST || 'transiter';
 const TRANSITER_PORT = process.env.TRANSITER_PORT || '8080';
 const BASE_URL = `http://${TRANSITER_HOST}:${TRANSITER_PORT}`;
